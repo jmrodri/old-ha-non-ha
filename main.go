@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -8,6 +9,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configinformer "github.com/openshift/client-go/config/informers/externalversions"
 	configv1lister "github.com/openshift/client-go/config/listers/config/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -22,6 +24,7 @@ func main() {
 		fmt.Printf("problem loading kubeconfig: %v\n", err)
 		os.Exit(-3)
 	}
+	fmt.Printf("clusters: %v\n", mergedConfig.Clusters)
 
 	fmt.Println("creating newdefaultclientconfig")
 	cfg := clientcmd.NewDefaultClientConfig(*mergedConfig, nil)
@@ -39,10 +42,12 @@ func main() {
 		os.Exit(-2)
 	}
 
-	operatorConfigInformer := configinformer.NewSharedInformerFactoryWithOptions(configClient, 20*time.Minute)
+	operatorConfigInformer := configinformer.NewSharedInformerFactoryWithOptions(configClient, 2*time.Second)
+	// operatorConfigInformer.Start(nil)
 	infrastructureLister = operatorConfigInformer.Config().V1().Infrastructures().Lister()
 
-	infraConfig, err := infrastructureLister.Get("cluster")
+	// infraConfig, err := infrastructureLister.Get("cluster")
+	infraConfig, err := configClient.ConfigV1().Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
 	if err != nil {
 		fmt.Printf("problem getting infrastructure config: %v\n", err)
 		os.Exit(-4)
